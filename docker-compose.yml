@@ -1,0 +1,22 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile 
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./frontend:/app/monitoring-app
+
+    env_file:
+      - ./frontend/.env
+
+    networks:
+      - edinet-analyzer-network
+
+    tty: true
+
+networks:
+  edinet-analyzer-network:
