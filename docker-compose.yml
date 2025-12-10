@@ -4,6 +4,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile 
 
+    container_name: analyzer-frontend
+
     ports:
       - "3000:3000"
 
@@ -17,6 +19,34 @@ services:
       - edinet-analyzer-network
 
     tty: true
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      
+    container_name: analyzer-backend
+
+    ports:
+      - "8080:8080"
+
+    volumes: 
+      - ./backend:/app
+
+    env_file:
+      - ./backend/.env
+
+    # mysqlの後に起動するらしい
+    # depends_on:
+    #   - mysql
+
+    networks:
+      - edinet-analyzer-network
+
+    tty: true
+
+    # コマンドを実行できるようにするやつらしい
+    stdin_open: true
 
 networks:
   edinet-analyzer-network:
