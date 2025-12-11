@@ -50,9 +50,11 @@
 </template>
 
 <script setup>
+// nuxt.config.tsで設定した環境変数を取得
 const config = useRuntimeConfig()
 
 // APIから企業一覧を取得
+// 特に何も書かなければGETになる（デフォルト）
 const { data: companies, pending, error, refresh } = await useFetch(
   `${config.public.apiBase}/api/v1/companies`,
   {

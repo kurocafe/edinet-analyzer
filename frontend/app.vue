@@ -1,3 +1,4 @@
+<!-- Reactのreturnの部分 -->
 <template>
   <div>
     <nav class="navbar">
@@ -12,6 +13,11 @@
   </div>
 </template>
 
+<script>
+  // JSの部分
+</script>
+
+<!-- CSSの部分 -->
 <style>
 * {
   margin: 0;
