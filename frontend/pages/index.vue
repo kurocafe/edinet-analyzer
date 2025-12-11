@@ -22,7 +22,7 @@
           企業データがありません
         </p>
         
-        <table v-else class="company-table">
+        <table v-else class="company-table ">
           <thead>
             <tr>
               <th>ID</th>
