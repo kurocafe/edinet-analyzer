@@ -1,9 +1,9 @@
 <template>
-  <div class="container">
+  <div class=" max-w-[1000px] my-auto p-8">
     <h1>EDINET Analyzer</h1>
     <p>財務データランキングシステム</p>
 
-    <div class="section">
+    <div class="section ">
       <h2>企業一覧</h2>
       
       <!-- ローディング中 -->
@@ -22,7 +22,7 @@
           企業データがありません
         </p>
         
-        <table v-else class="company-table">
+        <table v-else class="company-table ">
           <thead>
             <tr>
               <th>ID</th>
