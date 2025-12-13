@@ -1,1 +1,42 @@
+@config "~/tailwind.config.ts";
 @import "tailwindcss";
+
+@layer base{
+  h1 {
+    @apply block text-blue-500 text-4xl mb-2;
+  }
+
+  p {
+    @apply block text-gray-500 mb-8 text-lg font-sans;
+  }
+
+  h2 {
+    @apply block text-2xl mb-4;
+  }
+
+  body{
+    @apply font-sans bg-gray-100 font-bold;
+  }
+}
+
+@layer components {
+  .loading {
+    @apply text-center p-8 text-gray-500 italic animate-pulse;
+  }
+
+  .error{
+    @apply p-4 bg-red-50 border-red-200 text-red-700 rounded-sm;
+  }
+
+  .container-table-th {
+    @apply bg-gray-50 p-3 text-left font-medium border-b-2 border-solid border-b-gray-200;
+  }
+
+  .company-table-td{
+    @apply p-3 border-b-2 border-solid border-b-gray-200;
+  }
+
+  .company-table-tr{
+    @apply hover:bg-gray-50;
+  }
+}
