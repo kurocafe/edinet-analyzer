@@ -3,7 +3,7 @@
     <h1>EDINET Analyzer</h1>
     <p>財務データランキングシステム</p>
 
-    <div class="section ">
+    <div class="bg-white p-8 rounded-lg shadow-sm">
       <h2>企業一覧</h2>
       
       <!-- ローディング中 -->
@@ -12,8 +12,8 @@
       </div>
       
       <!-- エラー -->
-      <div v-else-if="error" class="error">
-        エラー: {{ error.message }}
+      <div v-if="error" class="err">
+        エラー: {{ error }}
       </div>
       
       <!-- データ表示 -->
@@ -22,27 +22,29 @@
           企業データがありません
         </p>
         
-        <table v-else class="company-table ">
+        <table v-else class="w-full border-collapse mb-4">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>企業名</th>
-              <th>証券コード</th>
-              <th>業界</th>
+              <th class="company-table-th">ID</th>
+              <th class="company-table-th">企業名</th>
+              <th class="company-table-th">証券コード</th>
+              <th class="company-table-th">業界</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="company in companies" :key="company.ID">
-              <td>{{ company.ID }}</td>
-              <td>{{ company.name }}</td>
-              <td>{{ company.secCode }}</td>
-              <td>{{ company.industry }}</td>
+            <tr v-for="company in companies" :key="company.ID" class="company-table-tr">
+              <td class="company-table-td">{{ company.ID }}</td>
+              <td class="company-table-td">
+                <NuxtLink :to="`/detail/${company.ID}`" class=" hover:text-blue-500">{{ company.name }}</NuxtLink>
+              </td>
+              <td class="company-table-td">{{ company.secCode }}</td>
+              <td class="company-table-td">{{ company.industry }}</td>
             </tr>
           </tbody>
         </table>
       </div>
       
-      <button @click="refresh()" class="refresh-btn">
+      <button @click="fetchCompany()" class=" bg-blue-500 text-white py-2 px-4 rounded-sm cursor-pointer hover:bg-[#1d4ed8]">
         再読み込み
       </button>
     </div>
@@ -51,98 +53,11 @@
 
 <script setup>
 // nuxt.config.tsで設定した環境変数を取得
-const config = useRuntimeConfig()
+  const config = useRuntimeConfig()
 
-// APIから企業一覧を取得
-// 特に何も書かなければGETになる（デフォルト）
-const { data: companies, pending, error, refresh } = await useFetch(
-  `${config.public.apiBase}/api/v1/companies`,
-  {
-    default: () => []
-  }
-)
+  const {companies, pending, error, fetchCompany} = useCompany()
+  await fetchCompany()
+
+  const {fetchFinancial} = useFin()
+  await fetchFinancial()
 </script>
-
-<style scoped>
-.container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-h1 {
-  color: #2563eb;
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-}
-
-p {
-  color: #6b7280;
-  margin-bottom: 2rem;
-}
-
-.section {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-h2 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: #1f2937;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-  font-style: italic;
-}
-
-.error {
-  padding: 1rem;
-  background: #fee;
-  border: 1px solid #fcc;
-  border-radius: 4px;
-  color: #c00;
-}
-
-.company-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
-}
-
-.company-table th {
-  background: #f3f4f6;
-  padding: 0.75rem;
-  text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.company-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.company-table tr:hover {
-  background: #f9fafb;
-}
-
-.refresh-btn {
-  background: #2563eb;
-  color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.refresh-btn:hover {
-  background: #1d4ed8;
-}
-</style>
