@@ -9,6 +9,7 @@ import (
 	// 自分のパッケージ
 	"github.com/kurocafe/edinet-analyzer/config"
 	"github.com/kurocafe/edinet-analyzer/models"
+	"github.com/kurocafe/edinet-analyzer/services"
 )
 
 func main() {
@@ -104,6 +105,32 @@ func main() {
 
 		config.DB.Where("company_id = ?", companyID).Find(&financialData)
 		ctx.JSON(http.StatusOK, financialData)
+	})
+
+	// EDINET書類一覧API
+	r.GET("/api/v1/edinet/documents", func(ctx *gin.Context) {
+		// クエリパラメータ取得
+		date := ctx.Query("date")       // 形式: YYYY-MM-DD
+		secCode := ctx.Query("secCode") // 証券コード4桁
+
+		// dateは必須
+		if date == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "date パラメータは必須です（例: 2024-06-28）",
+			})
+			return
+		}
+
+		// EDINET APIを呼び出し
+		documents, err := services.GetDocuments(date, secCode)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, documents)
 	})
 
 	r.Run(":8080")

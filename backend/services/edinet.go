@@ -62,11 +62,11 @@ func GetDocuments(date string, secCode string) ([]EDINETDocument, error) {
 	}
 
 	// 証券コードでフィルタリング
-	if secCode == "" {
+	if secCode != "" {
 		// 4桁 → 5桁に変換
 		secCode5 := secCode + "0"
 
-		var filtered []EDINETDocument
+		filtered := []EDINETDocument{}
 		for _, doc := range result.Results {
 			// 有価証券報告書(docTypeCode: 120)かつコード一致
 			if doc.DocTypeCode == "120" && doc.SecCode == secCode5 {
@@ -78,7 +78,7 @@ func GetDocuments(date string, secCode string) ([]EDINETDocument, error) {
 	}
 
 	// 証券コード指定なしの場合は有価証券報告書をすべて返す
-	var filtered []EDINETDocument
+	filtered := []EDINETDocument{}
 	for _, doc := range result.Results {
 		if doc.DocTypeCode == "120" {
 			filtered = append(filtered, doc)
