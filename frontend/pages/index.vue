@@ -58,5 +58,6 @@
   const {companies, pending, error, fetchCompany} = useCompany()
   await fetchCompany()
 
-  
+  const {fetchFinancial} = useFin()
+  await fetchFinancial()
 </script>

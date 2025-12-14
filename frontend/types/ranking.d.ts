@@ -31,3 +31,13 @@ export interface DividendRanking {
   fiscalYear: number
   dividend: number
 }
+
+export interface ProfitGrowthRanking {
+  rank: number
+  company: Company
+  baseYear: number
+  targetYear: number
+  baseProfit: number
+  targetProfit: number
+  growthRate: number       // パーセント
+}

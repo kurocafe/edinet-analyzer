@@ -1,10 +1,10 @@
 <template>
   <div>
-    <div v-if="pending" class="loading">
+    <div v-if="pending || finPending" class="loading">
       loading...
     </div>
 
-    <div v-if="error" class="err">
+    <div v-if="error || finError" class="err">
       {{ error }}
     </div>
 
@@ -16,6 +16,10 @@
     <div class="text-9xl">
       ここにグラフを作成
     </div>
+
+    <pre v-if="financialData">
+      {{ JSON.stringify(financialData, null, 3) }}
+    </pre>
   </div>
 </template>
 
@@ -25,7 +29,11 @@
 
   const { pending, error, getCompanyById } = useCompany()
   const company = getCompanyById(id)
+  
   const {financialData, pending: finPending, error: finError, fetchFinancial, getFinancialById, getFinancialByYear} = useFin()
   await fetchFinancial()
+
+  const progressData = getFinancialById(id)
   
+  // console.log(financialData.value)
 </script>

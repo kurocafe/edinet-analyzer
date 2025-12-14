@@ -1,5 +1,7 @@
+import type {FinancialData} from "~/types/financialData"
+
 export default defineEventHandler(() => {
-  const datas = [
+  const datas: FinancialData[] = [
     {
     "ID": 1,
     "companyId": 1,
@@ -10,4 +12,6 @@ export default defineEventHandler(() => {
     "dividend": 120,
     }
   ]
+
+  return datas
 })
