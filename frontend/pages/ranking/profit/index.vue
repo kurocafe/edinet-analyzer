@@ -1,5 +1,5 @@
 <template>
   <div>
-    detail for one company
+    profit page
   </div>
 </template>
