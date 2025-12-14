@@ -5,18 +5,39 @@ export interface Rankings{
   DividendRanking: DividendRankingItem[];
 }
 
-export interface GrowthRankingItem{  
-  Rank: number;
-  Company: Company;
-  GrowthRate: number;
-  PrevIncome: number;
-  CurrentIncome: number;
+export interface RevenueGrowthRanking {
+  rank: number
+  company: Company
+  baseYear: number
+  targetYear: number
+  baseRevenue: number
+  targetRevenue: number
+  growthRate: number       // パーセント
 }
 
-export interface DividendRankingItem {
-  Rank: number;
-  Company: Company;
-  DividendYield: number;
-  Dividend: number;
-  StockPrice: number;
+export interface IncomeGrowthRanking {
+  rank: number
+  company: Company
+  baseYear: number
+  targetYear: number
+  baseIncome: number
+  targetIncome: number
+  growthRate: number 
+}
+
+export interface DividendRanking {
+  rank: number
+  company: Company
+  fiscalYear: number
+  dividend: number
+}
+
+export interface ProfitGrowthRanking {
+  rank: number
+  company: Company
+  baseYear: number
+  targetYear: number
+  baseProfit: number
+  targetProfit: number
+  growthRate: number       // パーセント
 }
