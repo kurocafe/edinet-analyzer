@@ -12,8 +12,8 @@
       </div>
       
       <!-- エラー -->
-      <div v-else-if="error" class="error">
-        エラー: {{ error.message }}
+      <div v-if="error" class="err">
+        エラー: {{ error }}
       </div>
       
       <!-- データ表示 -->
@@ -34,7 +34,9 @@
           <tbody>
             <tr v-for="company in companies" :key="company.ID" class="company-table-tr">
               <td class="company-table-td">{{ company.ID }}</td>
-              <td class="company-table-td">{{ company.name }}</td>
+              <td class="company-table-td">
+                <NuxtLink :to="`/detail/${company.ID}`" class=" hover:text-blue-500">{{ company.name }}</NuxtLink>
+              </td>
               <td class="company-table-td">{{ company.secCode }}</td>
               <td class="company-table-td">{{ company.industry }}</td>
             </tr>
@@ -42,7 +44,7 @@
         </table>
       </div>
       
-      <button @click="refresh()" class=" bg-blue-500 text-white py-2 px-4 rounded-sm cursor-pointer hover:bg-[#1d4ed8]">
+      <button @click="fetchCompany()" class=" bg-blue-500 text-white py-2 px-4 rounded-sm cursor-pointer hover:bg-[#1d4ed8]">
         再読み込み
       </button>
     </div>
@@ -51,26 +53,10 @@
 
 <script setup>
 // nuxt.config.tsで設定した環境変数を取得
-const config = useRuntimeConfig()
+  const config = useRuntimeConfig()
 
-// APIから企業一覧を取得
-// 特に何も書かなければGETになる（デフォルト）
-const { data: companies, pending, error, refresh } = await useFetch(
-  `${config.public.apiBase}/api/v1/companies`,
-  {
-    default: () => []
-  }
-)
+  const {companies, pending, error, fetchCompany} = useCompany()
+  await fetchCompany()
+
+  
 </script>
-
-<style scoped>
-
-/* .company-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.company-table tr:hover {
-  background: #f9fafb;
-} */
-</style>

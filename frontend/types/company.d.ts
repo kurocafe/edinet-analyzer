@@ -1,8 +1,10 @@
 export interface Company {
-  Name: string;
-  SecCode: string;
-  EDINETCode: string;
-  Industry: string;
-  FinancialData: FinancialData[];
-  Documents: Document[];
+  ID: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+  name: string;
+  secCode: string;
+  edinetCode: string;
+  financialData?: FinancialData[];
 }
