@@ -84,7 +84,7 @@ func main() {
 		fiscalYear := ctx.Query("fiscalYear")
 		companyID := ctx.Query("companyId")
 
-		query := config.DB.Preload("Company")
+		query := config.DB
 
 		if fiscalYear != "" {
 			query = query.Where("fiscal_year = ?", fiscalYear)
