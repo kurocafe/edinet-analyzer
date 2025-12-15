@@ -87,3 +87,54 @@ func GetDocuments(date string, secCode string) ([]EDINETDocument, error) {
 
 	return filtered, nil
 }
+
+// EDINET書類取得API
+// docID: 書類ID（例：S100TX1S）
+// 戻り値: 保存したファイルパス
+func DownloadDocument(docID string) (string, error) {
+	apiKey := os.Getenv("EDINET_API_KEY")
+	if apiKey == "" {
+		return "", fmt.Errorf("EDINET_API_KEY が設定されていません")
+	}
+
+	// EDINET 書類取得APIのURL
+	// type=1: 提出本文書及び監査報告書（ZIP形式）
+	url := fmt.Sprintf(
+		"https://disclosure.edinet-fsa.go.jp/api/v1/documents/%s?type=1&Subscription-Key=%s",
+		docID,
+		apiKey,
+	)
+
+	// HTTPリクエスト
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("EDINET APIリクエスト失敗: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("EDINET API エラー: ステータスコード %d", resp.StatusCode)
+	}
+
+	// 保存先ディレクトリ作成
+	downloadDir := "/app/data/edinet"
+	os.MkdirAll(downloadDir, 0755)
+
+	// ファイル名
+	filename := fmt.Sprintf("%s/%s.zip", downloadDir, docID)
+
+	// ファイル作成
+	file, err := os.Create(filename)
+	if err != nil {
+		return "", fmt.Errorf("ファイル作成失敗: %v", err)
+	}
+	defer file.Close()
+
+	// レスポンスボディをファイルに書き込み
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("ファイル書き込み失敗: %v", err)
+	}
+
+	return filename, nil
+}
