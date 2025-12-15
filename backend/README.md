@@ -21,12 +21,13 @@ backend/
 ├── models/
 │   ├── company.go          # 企業モデル
 │   └── financial_data.go   # 財務データモデル
+├── services/
+│   └── edinet.go           # EDINET API連携（書類一覧、ダウンロード）
 ├── scripts/
 │   └── seed_companies.go   # 企業データCSVインポート
 └── (以下は空ディレクトリ)
     ├── handlers/           # HTTPハンドラー（未実装）
     ├── repositories/       # データアクセス層（未実装）
-    ├── services/           # ビジネスロジック（未実装）
     ├── middlewares/        # ミドルウェア（未実装）
     ├── parser/             # XBRLパーサー（未実装）
     └── utils/              # ユーティリティ（未実装）
@@ -39,12 +40,18 @@ backend/
 `backend/.env` ファイルを作成：
 
 ```env
+# データベース設定
 DB_HOST=mysql
 DB_PORT=3306
 DB_USER=analyzer_user
 DB_PASSWORD=analyzer_password
 DB_NAME=edinet_analyzer_db
+
+# EDINET API設定
+EDINET_API_KEY=あなたのAPIキー
 ```
+
+EDINET APIキーは[こちら](https://disclosure2.edinet-fsa.go.jp/)から取得してください。
 
 ### 2. 起動（Docker Compose推奨）
 
@@ -69,6 +76,8 @@ docker exec -it edinet-mysql mysql -u analyzer_user -p --default-character-set=u
 
 ## 実装済みAPI
 
+### 基本API
+
 | メソッド | エンドポイント | 説明 | クエリパラメータ |
 |---------|---------------|------|-----------------|
 | GET | `/` | ヘルスチェック | - |
@@ -78,7 +87,16 @@ docker exec -it edinet-mysql mysql -u analyzer_user -p --default-character-set=u
 | POST | `/api/v1/financial-data` | 財務データ追加 | - |
 | GET | `/api/v1/companies/:id/financial-data` | 特定企業の財務データ | - |
 
+### EDINET連携API
+
+| メソッド | エンドポイント | 説明 | パラメータ |
+|---------|---------------|------|-----------|
+| GET | `/api/v1/edinet/documents` | EDINET書類一覧取得 | `date` (必須), `secCode` (任意) |
+| GET | `/api/v1/edinet/documents/:docID/download` | 書類ZIPダウンロード | `docID` (パス) |
+
 ### APIリクエスト例
+
+#### 基本API
 
 ```bash
 # 企業一覧取得
@@ -103,6 +121,39 @@ curl -X POST http://localhost:8080/api/v1/financial-data \
     "netIncome": 1400000000000,
     "dividend": 120
   }'
+```
+
+#### EDINET連携API
+
+```bash
+# EDINET書類一覧取得（全件）
+curl "http://localhost:8080/api/v1/edinet/documents?date=2024-06-28"
+
+# EDINET書類一覧取得（証券コード指定）
+curl "http://localhost:8080/api/v1/edinet/documents?date=2024-06-28&secCode=5973"
+
+# レスポンス例
+# [{
+#   "docID": "S100TUID",
+#   "edinetCode": "E01441",
+#   "secCode": "59730",
+#   "filerName": "株式会社トーアミ",
+#   "docTypeCode": "120",
+#   "periodStart": "2023-04-01",
+#   "periodEnd": "2024-03-31",
+#   "submitDateTime": "2024-06-28 09:00",
+#   "xbrlFlag": "1"
+# }]
+
+# 書類ZIPダウンロード
+curl "http://localhost:8080/api/v1/edinet/documents/S100TX1S/download"
+
+# レスポンス例
+# {
+#   "message": "ダウンロード完了",
+#   "filename": "/app/data/edinet/S100TX1S.zip",
+#   "docID": "S100TX1S"
+# }
 ```
 
 ## 未実装API（要実装）
@@ -147,22 +198,27 @@ curl -X POST http://localhost:8080/api/v1/financial-data \
 - ✅ データベース接続（リトライ機能付き）
 - ✅ GORMモデル定義
 - ✅ 自動マイグレーション
+- ✅ **EDINET書類一覧取得API**（証券コードフィルタリング対応）
+- ✅ **EDINET書類ダウンロードAPI**（ZIP形式）
+- ✅ **services層の部分的実装**（edinet.go）
 
 ### 未実装（TODO）
-- ❌ レイヤー構造（handlers/services/repositories）への分割
+- ❌ レイヤー構造（handlers/repositories）への完全分割
 - ❌ ランキングAPI（成長率計算ロジック）
-- ❌ EDINET API連携
-- ❌ XBRLパーサー
+- ❌ **XBRLパーサー**（ZIPから財務データ抽出）
+- ❌ 企業詳細取得API
 - ❌ エラーハンドリングの強化
 - ❌ バリデーション
 - ❌ ログ出力の整備
 
 ## 注意事項
 
-- 現在のコードはすべて`main.go`に直書きされています
-- 設計書で定義されたレイヤー構造（handlers/services/repositories）は未実装です
+- APIハンドラーは`main.go`に直書きされています（リファクタリング推奨）
+- 設計書で定義されたレイヤー構造は部分的実装（services/edinet.goのみ）
 - ランキング機能はまだ実装されていません
-- EDINET APIとの連携機能はありません
+- **EDINET API連携は書類一覧取得とダウンロードのみ実装済み**
+- **XBRLパーサーが未実装のため、ZIPから財務データを抽出できません**
+- ダウンロードしたZIPファイルは `/app/data/edinet/` に保存されます
 
 ## 関連ドキュメント
 

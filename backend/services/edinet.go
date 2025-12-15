@@ -100,7 +100,7 @@ func DownloadDocument(docID string) (string, error) {
 	// EDINET 書類取得APIのURL
 	// type=1: 提出本文書及び監査報告書（ZIP形式）
 	url := fmt.Sprintf(
-		"https://disclosure.edinet-fsa.go.jp/api/v1/documents/%s?type=1&Subscription-Key=%s",
+		"https://disclosure.edinet-fsa.go.jp/api/v2/documents/%s?type=1&Subscription-Key=%s",
 		docID,
 		apiKey,
 	)
