@@ -133,5 +133,26 @@ func main() {
 		ctx.JSON(http.StatusOK, documents)
 	})
 
+	// EDINET書類ダウンロードAPI（ZIP形式）
+	r.GET("/api/v1/edinet/documents/:docID/download", func(ctx *gin.Context) {
+		docID := ctx.Param("docID")
+
+		// EDINET APIを呼び出してZIPダウンロード
+		filename, err := services.DownloadDocument(docID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message":  "ダウンロード完了",
+			"filename": filename,
+			"docID":    docID,
+		})
+	})
+
+	// サーバー起動
 	r.Run(":8080")
 }
