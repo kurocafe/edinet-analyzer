@@ -1,0 +1,126 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/joho/godotenv"
+	"github.com/kurocafe/edinet-analyzer/config"
+	"github.com/kurocafe/edinet-analyzer/models"
+	"github.com/kurocafe/edinet-analyzer/services"
+)
+
+func main() {
+	// 環境変数読み込み
+	godotenv.Load("../.env")
+
+	// データベース接続
+	config.ConnectDatabase()
+
+	// 対照企業
+	companies := []struct {
+		ID      uint
+		Name    string
+		SecCode string
+	}{
+		{1, "ソニーグループ", "6758"},
+		{2, "任天堂", "7974"},
+		{3, "KDDI", "9433"},
+		{4, "ソフトバンクグループ", "9984"},
+		{5, "NTT", "9432"},
+		{6, "楽天グループ", "4755"},
+		{7, "サイバーエージェント", "4751"},
+		{8, "DeNA", "2432"},
+		{9, "メルカリ", "4385"},
+		{10, "富士通", "6702"},
+		{11, "NEC", "6701"},
+		{12, "パナソニック", "6752"},
+		{13, "キーエンス", "6861"},
+		{14, "オムロン", "6645"},
+		{15, "村田製作所", "6981"},
+	}
+
+	// 提出日候補（2024年6月）
+	dates := []string{
+		"2024-06-28", "2024-06-27", "2024-06-26", "2024-06-25", "2024-06-24",
+		"2024-06-21", "2024-06-20", "2024-06-19", "2024-06-18", "2024-06-17",
+	}
+
+	successCount := 0
+	failCount := 0
+
+	for _, company := range companies {
+		fmt.Printf("\n=== %s (%s) ===\n", company.Name, company.SecCode)
+
+		// 既に存在するかチェック
+		var existing models.FinancialData
+		result := config.DB.Where("company_id = ? AND fiscal_year = 2024", company.ID).First(&existing)
+		if result.Error == nil {
+			fmt.Printf("スキップ: 既に2024年度のデータがあります\n")
+			continue
+		}
+
+		var docID string
+		var found bool
+		var foundDate string
+
+		// 複数の提出日を試す
+		for _, date := range dates {
+			docs, err := services.GetDocuments(date, company.SecCode)
+			if err != nil {
+				continue
+			}
+
+			if len(docs) > 0 {
+				docID = docs[0].DocID
+				foundDate = date
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			fmt.Printf("❌ 書類が見つかりませんでした\n")
+			failCount++
+			continue
+		}
+
+		fmt.Printf("📄 書類発見: %s (提出日: %s)\n", docID, foundDate)
+
+		// 書類をダウンロード
+		zipPath, err := services.DownloadDocument(docID)
+		if err != nil {
+			fmt.Printf("❌ ダウンロード失敗: %v\n", err)
+			failCount++
+			continue
+		}
+		fmt.Printf("⬇️ ダウンロード完了: %s\n", zipPath)
+
+		// XBRL解析
+		xbrlData, err := services.ParseXBRL(zipPath)
+		if err != nil {
+			fmt.Printf("❌ XBRL解析失敗: %v\n", err)
+			failCount++
+			continue
+		}
+
+		// DBに保存
+		financialData := models.FinancialData{
+			CompanyID:       company.ID,
+			FiscalYear:      xbrlData.FiscalYear,
+			Revenue:         xbrlData.Revenue,
+			OperatingIncome: xbrlData.OperatingIncome,
+			NetIncome:       xbrlData.NetIncome,
+			Dividend:        xbrlData.Dividend,
+		}
+		config.DB.Create(&financialData)
+
+		fmt.Printf("☑️ 保存完了: %d年度（売上: %.2f億円）\n",
+			xbrlData.FiscalYear,
+			float64(xbrlData.Revenue)/100000000)
+		successCount++
+	}
+
+	fmt.Println("\n========================================")
+	fmt.Printf("完了: 成功 %d件 / 失敗 %d件\n", successCount, failCount)
+	fmt.Println("========================================")
+}
