@@ -10,7 +10,7 @@ export const useFin = () => {
     error.value = null
 
     try{
-      financialData.value = await $fetch("/api/test/financial")
+      financialData.value = await $fetch("/api/financial")
     }catch(e){
       error.value = e as Error
     }finally{

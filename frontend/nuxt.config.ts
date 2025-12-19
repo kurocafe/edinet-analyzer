@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   // ランタイム設定
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:8080'
+      apiBase: 'http://backend:8080'
     }
   },
   vite: {

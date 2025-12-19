@@ -10,7 +10,7 @@ export const useCompany = () => {
     pending.value = true
 
     try{
-      companies.value = await $fetch("/api/test/getCompanies")
+      companies.value = await $fetch("/api/getCompanies")
     }catch(e){
       error.value = e as Error
     }finally{
