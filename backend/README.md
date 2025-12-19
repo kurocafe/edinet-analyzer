@@ -14,23 +14,25 @@ Go + Gin + GORM + MySQLで構築したEDINET財務データ分析API
 
 ```
 backend/
-├── main.go                 # エントリーポイント、APIルーティング
-├── go.mod                  # 依存関係管理
+├── main.go                      # エントリーポイント、APIルーティング
+├── go.mod                       # 依存関係管理
 ├── config/
-│   └── database.go         # DB接続設定（リトライ機能付き）
+│   └── database.go              # DB接続設定（リトライ機能付き）
 ├── models/
-│   ├── company.go          # 企業モデル
-│   └── financial_data.go   # 財務データモデル
+│   ├── company.go               # 企業モデル
+│   └── financial_data.go        # 財務データモデル
 ├── services/
-│   └── edinet.go           # EDINET API連携（書類一覧、ダウンロード）
+│   ├── edinet.go                # EDINET API連携（書類一覧、ダウンロード）
+│   └── xbrl_parser.go           # XBRLパーサー（ZIP→財務データ）
 ├── scripts/
-│   └── seed_companies.go   # 企業データCSVインポート
+│   ├── seed_companies.go        # 企業データCSVインポート
+│   ├── fetch_all_companies.go   # 全企業データ自動取得スクリプト
+│   └── test_xbrl.go             # XBRL解析テストスクリプト
 └── (以下は空ディレクトリ)
-    ├── handlers/           # HTTPハンドラー（未実装）
-    ├── repositories/       # データアクセス層（未実装）
-    ├── middlewares/        # ミドルウェア（未実装）
-    ├── parser/             # XBRLパーサー（未実装）
-    └── utils/              # ユーティリティ（未実装）
+    ├── handlers/                # HTTPハンドラー（未実装）
+    ├── repositories/            # データアクセス層（未実装）
+    ├── middlewares/             # ミドルウェア（未実装）
+    └── utils/                   # ユーティリティ（未実装）
 ```
 
 ## セットアップ
@@ -93,6 +95,7 @@ docker exec -it edinet-mysql mysql -u analyzer_user -p --default-character-set=u
 |---------|---------------|------|-----------|
 | GET | `/api/v1/edinet/documents` | EDINET書類一覧取得 | `date` (必須), `secCode` (任意) |
 | GET | `/api/v1/edinet/documents/:docID/download` | 書類ZIPダウンロード | `docID` (パス) |
+| POST | `/api/v1/edinet/documents/:docID/parse` | XBRL解析→DB保存 | `docID` (パス), `companyID` (JSON) |
 
 ### APIリクエスト例
 
@@ -154,6 +157,49 @@ curl "http://localhost:8080/api/v1/edinet/documents/S100TX1S/download"
 #   "filename": "/app/data/edinet/S100TX1S.zip",
 #   "docID": "S100TX1S"
 # }
+
+# XBRL解析してDBに保存
+curl -X POST "http://localhost:8080/api/v1/edinet/documents/S100TX1S/parse" \
+  -H "Content-Type: application/json" \
+  -d '{"companyID": 1}'
+
+# レスポンス例
+# {
+#   "message": "財務データを保存しました",
+#   "financialData": {
+#     "ID": 1,
+#     "companyId": 1,
+#     "fiscalYear": 2024,
+#     "revenue": 520800000000,
+#     "operatingIncome": 62500000000,
+#     "netIncome": 43200000000,
+#     "dividend": 125
+#   }
+# }
+```
+
+## スクリプト
+
+### 全企業データ自動取得
+
+15社の企業データを自動でダウンロード・解析・DB保存します：
+
+```bash
+docker exec -it analyzer-backend go run /app/scripts/fetch_all_companies.go
+```
+
+**処理内容:**
+1. 15社の証券コードで書類を検索（複数日付を自動試行）
+2. 有価証券報告書をダウンロード（ZIP形式）
+3. XBRLファイルを解析して財務データ抽出
+4. データベースに自動保存
+
+### XBRL解析テスト
+
+単一のZIPファイルをテスト解析します：
+
+```bash
+docker exec -it analyzer-backend go run /app/scripts/test_xbrl.go
 ```
 
 ## 未実装API（要実装）
@@ -200,25 +246,41 @@ curl "http://localhost:8080/api/v1/edinet/documents/S100TX1S/download"
 - ✅ 自動マイグレーション
 - ✅ **EDINET書類一覧取得API**（証券コードフィルタリング対応）
 - ✅ **EDINET書類ダウンロードAPI**（ZIP形式）
-- ✅ **services層の部分的実装**（edinet.go）
+- ✅ **XBRLパーサー実装**（ZIP→財務データ抽出）
+- ✅ **XBRL解析API**（解析結果をDB保存）
+- ✅ **全企業データ自動取得スクリプト**
+- ✅ **services層の部分的実装**（edinet.go, xbrl_parser.go）
 
 ### 未実装（TODO）
 - ❌ レイヤー構造（handlers/repositories）への完全分割
 - ❌ ランキングAPI（成長率計算ロジック）
-- ❌ **XBRLパーサー**（ZIPから財務データ抽出）
 - ❌ 企業詳細取得API
 - ❌ エラーハンドリングの強化
 - ❌ バリデーション
 - ❌ ログ出力の整備
+- ❌ XBRL解析精度の向上（企業ごとのタグ名の違いに対応）
 
 ## 注意事項
 
 - APIハンドラーは`main.go`に直書きされています（リファクタリング推奨）
-- 設計書で定義されたレイヤー構造は部分的実装（services/edinet.goのみ）
+- 設計書で定義されたレイヤー構造は部分的実装（services/のみ）
 - ランキング機能はまだ実装されていません
-- **EDINET API連携は書類一覧取得とダウンロードのみ実装済み**
-- **XBRLパーサーが未実装のため、ZIPから財務データを抽出できません**
+- **XBRL解析は正規表現ベース**のため、企業によってタグ名が異なる場合は抽出できない可能性があります
 - ダウンロードしたZIPファイルは `/app/data/edinet/` に保存されます
+- `fetch_all_companies.go` は15社のIT・通信企業のデータを取得します
+
+## XBRLパーサーの仕様
+
+**抽出する財務データ:**
+- 会計年度（ファイル名から推測）
+- 売上高（NetSalesSummaryOfBusinessResults）
+- 営業利益（OperatingIncome）
+- 純利益（ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults）
+- 配当金（DividendPaidPerShareSummaryOfBusinessResults）
+
+**対応フォーマット:**
+- PublicDoc配下のXBRLファイル（.xbrl）
+- contextRef="CurrentYearDuration" の値を抽出
 
 ## 関連ドキュメント
 
