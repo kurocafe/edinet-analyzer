@@ -9,6 +9,7 @@ import (
 
 	// 自分のパッケージ
 	"github.com/kurocafe/edinet-analyzer/config"
+	"github.com/kurocafe/edinet-analyzer/handlers"
 	"github.com/kurocafe/edinet-analyzer/models"
 	"github.com/kurocafe/edinet-analyzer/services"
 )
@@ -199,6 +200,9 @@ func main() {
 			"financialData": financialData,
 		})
 	})
+
+	// ランキングAPI
+	r.GET("/api/v1/rankings/revenue-growth", handlers.GetRevenueGrowthRanking)
 
 	// サーバー起動
 	r.Run(":8080")

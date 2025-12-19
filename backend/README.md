@@ -21,6 +21,8 @@ backend/
 ├── models/
 │   ├── company.go               # 企業モデル
 │   └── financial_data.go        # 財務データモデル
+├── handlers/
+│   └── rankings.go              # ランキングハンドラー（売上成長率実装済み）
 ├── services/
 │   ├── edinet.go                # EDINET API連携（書類一覧、ダウンロード）
 │   └── xbrl_parser.go           # XBRLパーサー（ZIP→財務データ）
@@ -29,7 +31,6 @@ backend/
 │   ├── fetch_all_companies.go   # 全企業データ自動取得スクリプト
 │   └── test_xbrl.go             # XBRL解析テストスクリプト
 └── (以下は空ディレクトリ)
-    ├── handlers/                # HTTPハンドラー（未実装）
     ├── repositories/            # データアクセス層（未実装）
     ├── middlewares/             # ミドルウェア（未実装）
     └── utils/                   # ユーティリティ（未実装）
@@ -55,18 +56,19 @@ EDINET_API_KEY=あなたのAPIキー
 
 EDINET APIキーは[こちら](https://disclosure2.edinet-fsa.go.jp/)から取得してください。
 
-### 2. 起動（Docker Compose推奨）
+### 2. Docker Compose起動
+
+プロジェクトルートで実行（backend + frontend + mysql の3コンテナ構成）：
 
 ```bash
-# プロジェクトルートで実行
-docker-compose up
+docker-compose up -d
 ```
 
-### 3. 企業データのインポート（初回のみ）
+### 3. 企業マスタの登録（初回のみ）
 
 ```bash
-cd backend/scripts
-go run seed_companies.go
+# コンテナ内で実行
+docker exec -it analyzer-backend go run /app/scripts/seed_companies.go
 ```
 
 ### 4. MySQLに直接接続（デバッグ用）
@@ -180,19 +182,21 @@ curl -X POST "http://localhost:8080/api/v1/edinet/documents/S100TX1S/parse" \
 
 ## スクリプト
 
-### 全企業データ自動取得
+### 全企業データ自動取得（推奨）
 
-15社の企業データを自動でダウンロード・解析・DB保存します：
+15社 × 2年度（2023年、2024年）のデータを自動取得します：
 
 ```bash
 docker exec -it analyzer-backend go run /app/scripts/fetch_all_companies.go
 ```
 
 **処理内容:**
-1. 15社の証券コードで書類を検索（複数日付を自動試行）
-2. 有価証券報告書をダウンロード（ZIP形式）
-3. XBRLファイルを解析して財務データ抽出
-4. データベースに自動保存
+1. 2023年・2024年度の有価証券報告書を自動検索（5月〜7月の広範囲な日付を試行）
+2. 書類をダウンロード（ZIP形式）
+3. XBRL解析して財務データ抽出
+4. データベースに自動保存（重複チェック付き）
+
+**取得データ:** 売上高、営業利益、純利益、配当金
 
 ### XBRL解析テスト
 
@@ -238,49 +242,66 @@ docker exec -it analyzer-backend go run /app/scripts/test_xbrl.go
 
 ## 開発状況
 
-### 実装済み
-- ✅ 基本的なCRUD API（企業、財務データ）
-- ✅ CORS設定（フロントエンド連携対応）
-- ✅ データベース接続（リトライ機能付き）
-- ✅ GORMモデル定義
-- ✅ 自動マイグレーション
-- ✅ **EDINET書類一覧取得API**（証券コードフィルタリング対応）
-- ✅ **EDINET書類ダウンロードAPI**（ZIP形式）
-- ✅ **XBRLパーサー実装**（ZIP→財務データ抽出）
-- ✅ **XBRL解析API**（解析結果をDB保存）
-- ✅ **全企業データ自動取得スクリプト**
-- ✅ **services層の部分的実装**（edinet.go, xbrl_parser.go）
+### ✅ 実装済み
+- 基本CRUD API（企業、財務データ）
+- EDINET連携（書類一覧、ダウンロード、XBRL解析）
+- XBRLパーサー（ZIP→財務データ抽出）
+- Docker Compose環境（backend + frontend + mysql）
+- **複数年度対応の自動取得スクリプト**（2023年・2024年）
+- **ランキングハンドラー実装開始**（handlers/rankings.go）
+  - 売上成長率ランキング計算ロジック実装済み
+- CORS設定、DB接続（リトライ付き）、自動マイグレーション
 
-### 未実装（TODO）
-- ❌ レイヤー構造（handlers/repositories）への完全分割
-- ❌ ランキングAPI（成長率計算ロジック）
-- ❌ 企業詳細取得API
-- ❌ エラーハンドリングの強化
-- ❌ バリデーション
-- ❌ ログ出力の整備
-- ❌ XBRL解析精度の向上（企業ごとのタグ名の違いに対応）
+### 🔶 実装中
+- **ランキングAPI** - handlers層は実装済み、ルーティング登録が必要
+  - ✅ 売上成長率ランキング（ハンドラーのみ）
+  - ❌ 営業利益成長率ランキング
+  - ❌ 純利益成長率ランキング
+  - ❌ 配当金額ランキング
 
-## 注意事項
+### ❌ 未実装（TODO）
+- ランキングAPIのルーティング登録（main.goへの追加）
+- 残り3つのランキングハンドラー
+- 企業詳細取得API
+- レイヤー構造への完全分割（repositories）
+- エラーハンドリング強化、バリデーション
+- XBRL解析精度の向上
 
-- APIハンドラーは`main.go`に直書きされています（リファクタリング推奨）
-- 設計書で定義されたレイヤー構造は部分的実装（services/のみ）
-- ランキング機能はまだ実装されていません
-- **XBRL解析は正規表現ベース**のため、企業によってタグ名が異なる場合は抽出できない可能性があります
-- ダウンロードしたZIPファイルは `/app/data/edinet/` に保存されます
-- `fetch_all_companies.go` は15社のIT・通信企業のデータを取得します
+## 重要な注意点
 
-## XBRLパーサーの仕様
+- **ランキングAPI実装中** - 売上成長率のハンドラーは実装済み、ルーティング登録が必要
+- **XBRL解析は正規表現ベース** - 企業によってタグ名が異なると抽出失敗する可能性あり
+- handlers層の実装開始（rankings.go）、main.goへの統合が次のステップ
+- ZIPファイル保存先: `/app/data/edinet/`
+- 対象企業: IT・通信業界15社（ソニー、任天堂、KDDI、NTT等）
 
-**抽出する財務データ:**
-- 会計年度（ファイル名から推測）
-- 売上高（NetSalesSummaryOfBusinessResults）
-- 営業利益（OperatingIncome）
-- 純利益（ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults）
-- 配当金（DividendPaidPerShareSummaryOfBusinessResults）
+## 次のステップ
 
-**対応フォーマット:**
-- PublicDoc配下のXBRLファイル（.xbrl）
-- contextRef="CurrentYearDuration" の値を抽出
+### 1. ランキングAPIの完成（最優先）
+
+**実装済み:**
+- ✅ `handlers/rankings.go` - 売上成長率ランキングハンドラー
+
+**残タスク:**
+1. main.goにルーティング追加
+   ```go
+   r.GET("/api/v1/rankings/revenue-growth", handlers.GetRevenueGrowthRanking)
+   ```
+
+2. 残り3つのハンドラー実装
+   - 営業利益成長率ランキング
+   - 純利益成長率ランキング
+   - 配当金額ランキング
+
+**計算式:** `(当期 - 前期) / 前期 × 100`
+
+---
+
+## XBRLパーサー仕様
+
+**抽出データ:** 会計年度、売上高、営業利益、純利益、配当金
+**対象:** PublicDoc配下の.xbrlファイル（contextRef="CurrentYearDuration"）
+**方式:** 正規表現による抽出
 
 ## 関連ドキュメント
 
