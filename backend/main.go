@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
@@ -8,6 +9,7 @@ import (
 
 	// 自分のパッケージ
 	"github.com/kurocafe/edinet-analyzer/config"
+	"github.com/kurocafe/edinet-analyzer/handlers"
 	"github.com/kurocafe/edinet-analyzer/models"
 	"github.com/kurocafe/edinet-analyzer/services"
 )
@@ -152,6 +154,55 @@ func main() {
 			"docID":    docID,
 		})
 	})
+
+	// XBRL解析 → DB保存API
+	r.POST("/api/v1/edinet/documents/:docID/parse", func(ctx *gin.Context) {
+		docID := ctx.Param("docID")
+
+		// 必須パラメータ: companyId
+		var request struct {
+			CompanyID uint `json:"companyID" binding:"required"`
+		}
+		if err := ctx.ShouldBindJSON(&request); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "companyId が必要です",
+			})
+			return
+		}
+
+		// ZIPファイルのパス
+		zipPath := fmt.Sprintf("/app/data/edinet/%s.zip", docID)
+
+		// XBRL解析
+		xbrlData, err := services.ParseXBRL(zipPath)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// FinancialDataとして保存
+		financialData := models.FinancialData{
+			CompanyID:       request.CompanyID,
+			FiscalYear:      xbrlData.FiscalYear,
+			Revenue:         xbrlData.Revenue,
+			OperatingIncome: xbrlData.OperatingIncome,
+			NetIncome:       xbrlData.NetIncome,
+			Dividend:        xbrlData.Dividend,
+		}
+
+		// DBに保存
+		config.DB.Create(&financialData)
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message":       "財務データを保存しました",
+			"financialData": financialData,
+		})
+	})
+
+	// ランキングAPI
+	r.GET("/api/v1/rankings/revenue-growth", handlers.GetRevenueGrowthRanking)
 
 	// サーバー起動
 	r.Run(":8080")
