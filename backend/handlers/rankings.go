@@ -38,7 +38,7 @@ func GetRevenueGrowthRanking(ctx *gin.Context) {
 		result2023 := config.DB.Where("company_id = ? AND fiscal_year = 2023", company.ID).First(&previous)
 
 		// 両年のデータが存在する場合に計算
-		if result2024.Error == nil && result2023.Error == nil {
+		if result2024.Error == nil && result2023.Error == nil && previous.Revenue > 0 {
 			growthRate := float64(current.Revenue-previous.Revenue) / float64(previous.Revenue) * 100
 
 			rankings = append(rankings, RankingItem{
