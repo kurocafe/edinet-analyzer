@@ -38,7 +38,7 @@ func GetRevenueGrowthRanking(ctx *gin.Context) {
 		result2023 := config.DB.Where("company_id = ? AND fiscal_year = 2023", company.ID).First(&previous)
 
 		// 両年のデータが存在する場合に計算
-		if result2024.Error == nil && result2023.Error == nil {
+		if result2024.Error == nil && result2023.Error == nil && previous.Revenue > 0 {
 			growthRate := float64(current.Revenue-previous.Revenue) / float64(previous.Revenue) * 100
 
 			rankings = append(rankings, RankingItem{
@@ -109,6 +109,84 @@ func GetProfitGrowthRanking(ctx *gin.Context) {
 	// 成長率でソート（降順）
 	sort.Slice(rankings, func(i, j int) bool {
 		return rankings[i].GrowthRate > rankings[j].GrowthRate
+	})
+
+	// ランク付け
+	for i := range rankings {
+		rankings[i].Rank = i + 1
+	}
+
+	ctx.JSON(http.StatusOK, rankings)
+}
+
+// 純利益成長率ランキング
+func GetIncomeGrowthRanking(ctx *gin.Context) {
+	var companies []models.Company
+	config.DB.Find(&companies)
+
+	var rankings []RankingItem
+
+	for _, company := range companies {
+		var current models.FinancialData
+		result2024 := config.DB.Where("company_id = ? AND fiscal_year = 2024", company.ID).First(&current)
+
+		var previous models.FinancialData
+		result2023 := config.DB.Where("company_id = ? AND fiscal_year = 2023", company.ID).First(&previous)
+
+		if result2024.Error == nil && result2023.Error == nil && previous.NetIncome > 0 {
+			growthRate := float64(current.NetIncome-previous.NetIncome) / float64(previous.NetIncome) * 100
+
+			rankings = append(rankings, RankingItem{
+				CompanyID:     company.ID,
+				CompanyName:   company.Name,
+				SecCode:       company.SecCode,
+				CurrentValue:  current.NetIncome,
+				PreviousValue: previous.NetIncome,
+				GrowthRate:    growthRate,
+				CurrentYear:   2024,
+				PreviousYear:  2023,
+			})
+		}
+	}
+
+	// 成長率で降順でソート
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].GrowthRate > rankings[j].GrowthRate
+	})
+
+	// ランク付け
+	for i := range rankings {
+		rankings[i].Rank = i + 1
+	}
+
+	ctx.JSON(http.StatusOK, rankings)
+}
+
+// 配当金ランキング（2024）
+func GetDividendRanking(ctx *gin.Context) {
+	var companies []models.Company
+	config.DB.Find(&companies)
+
+	var rankings []RankingItem
+
+	for _, company := range companies {
+		var current models.FinancialData
+		result := config.DB.Where("company_id = ? AND fiscal_year = 2024", company.ID).First(&current)
+
+		if result.Error == nil && current.Dividend > 0 {
+			rankings = append(rankings, RankingItem{
+				CompanyID:    company.ID,
+				CompanyName:  company.Name,
+				SecCode:      company.SecCode,
+				CurrentValue: int64(current.Dividend),
+				CurrentYear:  2024,
+			})
+		}
+	}
+
+	// 配当金で降順でソート
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].CurrentValue > rankings[j].CurrentValue
 	})
 
 	// ランク付け

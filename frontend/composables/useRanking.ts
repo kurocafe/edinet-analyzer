@@ -1,4 +1,4 @@
-import type { RevenueGrowthRanking, ProfitGrowthRanking, IncomeGrowthRanking } from "~/types/ranking"
+import type { RankingItem } from "~/types/ranking"
 
 interface searchQuery {
   limit?: number;
@@ -7,20 +7,17 @@ interface searchQuery {
 }
 
 export const useRanking = () => {
-  const revenues = useState<RevenueGrowthRanking[]>("rank:revenues", () => [])
-  const profits = useState<ProfitGrowthRanking[]>("rank:profits", () => [])
-  const incomes = useState<IncomeGrowthRanking[]>("rank:incomes", () => [])
+  const revenues = useState<RankingItem[]>("rank:revenues", () => [])
+  const profits = useState<RankingItem[]>("rank:profits", () => [])
+  const incomes = useState<RankingItem[]>("rank:incomes", () => [])
   
   const pending = useState("rank:pending", () => false)
   const error = useState<Error | null>("rank:error", () => null)
 
-  const fetchRevenues = async ({limit, baseYear, targetYear}: searchQuery = {}) => {
+  const fetchRevenues = async () => {
     pending.value = true
     error.value = null
-    let url = "/api/test/ranking/getRevenues?"
-    if(limit) url += `limit=${limit}`
-    if(baseYear) url += `baseYear=${baseYear}`
-    if(targetYear) url += `targetYear=${targetYear}`
+    let url = "/api/rankings/revenue-growth"
 
     try{
       revenues.value = await $fetch(url)
@@ -36,7 +33,7 @@ export const useRanking = () => {
     error.value = null
 
     try{
-      profits.value = await $fetch("/api/test/ranking/getProfits")
+      profits.value = await $fetch("/api/rankings/profit-growth")
     }catch(e){
       error.value = e as Error
     }finally{
@@ -49,7 +46,7 @@ export const useRanking = () => {
     error.value = null
 
     try{
-      incomes.value = await $fetch("/api/test/ranking/getIncomes")
+      incomes.value = await $fetch("/api/rankings/income-growth")
     }catch(e){
       error.value = e as Error
     }finally{
