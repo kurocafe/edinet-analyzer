@@ -1,6 +1,7 @@
 <template>
   <div>
     all graphs should be here!!
+    {{ revenues }}
   </div>
 </template>
 

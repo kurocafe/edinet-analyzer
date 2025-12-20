@@ -18,7 +18,7 @@
     </div>
 
     <pre v-if="financialData">
-      {{ JSON.stringify(financialData, null, 3) }}
+      {{ JSON.stringify(data, null, 3) }}
     </pre>
   </div>
 </template>
@@ -33,7 +33,7 @@
   const {financialData, pending: finPending, error: finError, fetchFinancial, getFinancialById, getFinancialByYear} = useFin()
   await fetchFinancial()
 
-  const progressData = getFinancialById(id)
+  const data = getFinancialById(id)
   
   // console.log(financialData.value)
 </script>

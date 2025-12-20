@@ -23,7 +23,7 @@ export const useFin = () => {
   }
 
   const getFinancialById = (id: number) => {
-    return computed(() => financialData.value.filter(f => f.ID == id))
+    return computed(() => financialData.value.filter(f => f.companyId == id))
   }
 
   return {
