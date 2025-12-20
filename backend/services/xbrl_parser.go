@@ -94,44 +94,77 @@ func ParseXBRL(zipPath string) (*XBRLData, error) {
 	}
 
 	// 売上高を取得
-	data.Revenue = extractValue(contentStr, "NetSalesSummaryOfBusinessResults", "CurrentYearDuration")
+	revenueTags := []string{
+		"NetSalesSummaryOfBusinessResults",
+		"NetSales",
+		"Sales",
+		"OperatingRevenue",
+		"OperatingRevenue1",
+		"OperatingRevenue2",
+		"RevenuesSummaryOfBusinessResults",
+	}
+	data.Revenue = extractValue(contentStr, revenueTags, "CurrentYearDuration")
 
 	// 営業利益を取得
-	data.OperatingIncome = extractValue(contentStr, "OperatingIncome", "CurrentYearDuration")
+	operatingIncomeTags := []string{
+		"OperatingIncome",
+		"OperatingIncomeLoss",
+		"OperatingIncomeLossSummaryOfBusinessResults",
+		"OperatingProfit",
+	}
+	data.OperatingIncome = extractValue(contentStr, operatingIncomeTags, "CurrentYearDuration")
 
 	// 純利益を取得
-	data.NetIncome = extractValue(contentStr, "ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults", "CurrentYearDuration")
+	netIncomeTags := []string{
+		"ProfitLossAttributableToOwnersOfParent",
+		"ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+		"NetIncome",
+		"ProfitLoss",
+		"NetIncomeLoss",
+	}
+	data.NetIncome = extractValue(contentStr, netIncomeTags, "CurrentYearDuration")
 
 	// 配当金を取得
-	dividendValue := extractValue(contentStr, "DividendPaidPerShareSummaryOfBusinessResults", "CurrentYearDuration_NonConsolidatedMember")
+	dividendTags := []string{
+		"DividendPaidPerShareSummaryOfBusinessResults",
+		"DividendPaidPerShare",
+		"CashDividendsPaidPerShare",
+	}
+	dividendValue := extractValue(contentStr, dividendTags, "CurrentYearDuration_NonConsolidatedMember")
+	if dividendValue == 0 {
+		// NonConsolidatedMember がない場合も試す
+		dividendValue = extractValue(contentStr, dividendTags, "CurrentYearDuration")
+	}
 	data.Dividend = int(dividendValue)
 
 	return data, nil
 }
 
 // タグから値を抽出
-func extractValue(content string, tagName string, contextRef string) int64 {
-	// パターン1: contextRef が先
-	pattern1 := fmt.Sprintf(`<%s[^>]*contextRef="%s"[^>]*>([0-9]+)<`, tagName, contextRef)
-	re1 := regexp.MustCompile(pattern1)
-	if matches := re1.FindStringSubmatch(content); len(matches) > 1 {
-		value, err := strconv.ParseInt(matches[1], 10, 64)
-		if err == nil {
-			return value
+func extractValue(content string, tagNames []string, contextRef string) int64 {
+	for _, tagName := range tagNames {
+		// パターン1: contextRef が先
+		pattern1 := fmt.Sprintf(`<%s[^>]*contextRef="%s"[^>]*>([0-9]+\.?[0-9]*)<`, tagName, contextRef)
+		re1 := regexp.MustCompile(pattern1)
+		if matches := re1.FindStringSubmatch(content); len(matches) > 1 {
+			floatValue, err := strconv.ParseFloat(matches[1], 64)
+			if err == nil && floatValue > 0 {
+				return int64(floatValue)
+			}
 		}
-	}
 
-	// パターン2: より柔軟なパターン（属性の順序を問わない）
-	// contextRef="CurrentYearDuration" を含む行を探す
-	lines := strings.Split(content, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, tagName) && strings.Contains(line, fmt.Sprintf(`contextRef="%s"`, contextRef)) {
-			// 数値を抽出
-			numPattern := regexp.MustCompile(`>([0-9]+\.?[0-9]*)<`)
-			if matches := numPattern.FindStringSubmatch(line); len(matches) > 1 {
-				floatValue, err := strconv.ParseFloat(matches[1], 64)
-				if err == nil {
-					return int64(floatValue)
+		// パターン2: より柔軟なパターン（属性の順序を問わない）
+		// contextRef="CurrentYearDuration" を含む行を探す
+		lines := strings.Split(content, "\n")
+		for _, line := range lines {
+			if strings.Contains(line, tagName) && strings.Contains(line, fmt.Sprintf(`contextRef="%s"`, contextRef)) {
+				// 数値を抽出
+				numPattern := regexp.MustCompile(`>([0-9]+\.?[0-9]*)<`)
+				if matches := numPattern.FindStringSubmatch(line); len(matches) > 1 {
+					floatValue, err := strconv.ParseFloat(matches[1], 64)
+					if err == nil {
+						return int64(floatValue)
+					}
 				}
 			}
 		}
