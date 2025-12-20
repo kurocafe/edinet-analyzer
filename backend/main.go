@@ -203,6 +203,9 @@ func main() {
 
 	// ランキングAPI
 	r.GET("/api/v1/rankings/revenue-growth", handlers.GetRevenueGrowthRanking)
+	r.GET("/api/v1/rankings/profit-growth", handlers.GetProfitGrowthRanking)
+	r.GET("/api/v1/rankings/income-growth", handlers.GetIncomeGrowthRanking)
+	r.GET("/api/v1/rankings/dividend", handlers.GetDividendRanking)
 
 	// サーバー起動
 	r.Run(":8080")
