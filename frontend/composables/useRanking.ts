@@ -25,7 +25,6 @@ export const useRanking = () => {
       error.value = e as Error
     }finally{
       pending.value = false
-      console.log(`revenues: ${revenues.value}`)
     }
   }
 
@@ -39,7 +38,6 @@ export const useRanking = () => {
       error.value = e as Error
     }finally{
       pending.value = false
-      console.log(`profits: ${profits.value}`)
     }
   }
 
@@ -53,7 +51,6 @@ export const useRanking = () => {
       error.value = e as Error
     }finally{
       pending.value = false
-      console.log(`incomes: ${incomes.value}`)
     }
   }
 
