@@ -75,3 +75,46 @@ func GetRevenueGrowthRanking(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, rankings)
 }
+
+// 営業利益成長率ランキング
+func GetProfitGrowthRanking(ctx *gin.Context) {
+	var companies []models.Company
+	config.DB.Find(&companies)
+
+	var rankings []RankingItem
+
+	for _, company := range companies {
+		var current models.FinancialData
+		result2024 := config.DB.Where("company_id = ? AND fiscal_year = 2024", company.ID).First(&current)
+
+		var previous models.FinancialData
+		result2023 := config.DB.Where("company_id = ? AND fiscal_year = 2023", company.ID).First(&previous)
+
+		if result2024.Error == nil && result2023.Error == nil && previous.OperatingIncome > 0 {
+			growthRate := float64(current.OperatingIncome-previous.OperatingIncome) / float64(previous.OperatingIncome) * 100
+
+			rankings = append(rankings, RankingItem{
+				CompanyID:     company.ID,
+				CompanyName:   company.Name,
+				SecCode:       company.SecCode,
+				CurrentValue:  current.OperatingIncome,
+				PreviousValue: previous.OperatingIncome,
+				GrowthRate:    growthRate,
+				CurrentYear:   2024,
+				PreviousYear:  2023,
+			})
+		}
+	}
+
+	// 成長率でソート（降順）
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].GrowthRate > rankings[j].GrowthRate
+	})
+
+	// ランク付け
+	for i := range rankings {
+		rankings[i].Rank = i + 1
+	}
+
+	ctx.JSON(http.StatusOK, rankings)
+}
