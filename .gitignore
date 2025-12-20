@@ -30,6 +30,9 @@ go.work.sum
 # zip files
 *.zip
 
+# data files
+backend/data/edinet/*
+
 # Editor/IDE
 # .idea/
 # .vscode/

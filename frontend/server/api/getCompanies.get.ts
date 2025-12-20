@@ -5,5 +5,5 @@ export default defineEventHandler(async (event) => {
     `${config.public.apiBase}/api/v1/companies` 
   )
   
-
+  return res
 })
